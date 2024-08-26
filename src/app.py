@@ -1,5 +1,14 @@
+#!/usr/bin/python3
+import argparse
 from application.application import Application
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description="Process the requests")
+    parser.add_argument('request', nargs='*', default=[], help="Request to send to the application")
+    args = parser.parse_args()
+
     app = Application()
-    app.run()
+    app.run(' '.join(args.request))
+
+if __name__ == "__main__":
+    main()

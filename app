@@ -1,14 +1,12 @@
 #!/usr/bin/bash
 
-# Check if the script was called with arguments
-if [ "$#" -eq 0 ]; then
-    # No arguments: run the main application
-    python3 src/app.py
-elif [ "$#" -eq 1 ]; then
-    # One argument: handle requests
-    REQUEST=$1
-    python3 src/app.py --request "$REQUEST"
+# If no arguments are provided, set REQUEST to an empty string
+if [ $# -eq 0 ]; then
+  REQUEST=""
 else
-    echo "Usage: ./app [request]"
-    exit 1
+  # Store all arguments as a single request string
+  REQUEST="$@"
 fi
+
+# Run the Python script with the request argument(s)
+python3 src/app.py $REQUEST
