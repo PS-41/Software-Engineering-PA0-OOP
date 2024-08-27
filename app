@@ -4,9 +4,9 @@
 if [ $# -eq 0 ]; then
   REQUEST=""
 else
-  # Store all arguments as a single request string
-  REQUEST="$@"
+  # Join all arguments into a single string
+  REQUEST="$1"
 fi
 
-# Run the Python script with the request argument(s)
-python3 src/app.py $REQUEST
+# Pass the entire REQUEST as one argument
+python3 src/app.py "$REQUEST"
