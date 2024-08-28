@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+output=$(python3 -m pytest --cov=src --cov-report=term --disable-warnings)
+coverage_line=$(echo "$output" | grep "TOTAL")
+coverage_rate=$(echo "$coverage_line" | awk '{print $4}')
+
+pass_line=$(echo "$output" | grep -o "[0-9]* passed")
+if [ -z "$pass_line" ]; then
+    tests_passed=0
+else
+    tests_passed=$(echo "$pass_line" | awk '{print $1}')
+fi
+
+fail_line=$(echo "$output" | grep -o "[0-9]* failed")
+if [ -z "$fail_line" ]; then
+    tests_failed=0
+else
+    tests_failed=$(echo "$fail_line" | awk '{print $1}')
+fi
+
+tests_total=$(($tests_passed + $tests_failed))
+
+pass_percentage=0
+if [ "$tests_total" -ne 0 ]; then
+  pass_percentage=$(echo "scale=2; $tests_passed / $tests_total * 100" | bc)
+fi
+
+echo "coverage: ${coverage_rate}"
+echo "pass_percentage: ${pass_percentage}%"

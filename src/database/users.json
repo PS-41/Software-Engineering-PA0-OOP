@@ -1,1 +1,10 @@
-{}
+{
+    "testuser": {
+        "username": "testuser",
+        "password": "testpass",
+        "name": "testname",
+        "status": "teststatus",
+        "session_token": "testsession",
+        "updated": "2024-08-28"
+    }
+}
