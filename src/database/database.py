@@ -25,10 +25,12 @@ class UserDatabase:
         self.save_data()
 
     def get_person(self, username):
-        return Person(username = username, password = self.data[username]['password'], 
-            name = self.data[username]['name'], status = self.data[username]['status'],
-            session_token = self.data[username]['session_token'], 
-            updated = self.data[username]['updated'])
+        if username in self.data.keys():
+            return Person(username = username, password = self.data[username]['password'], 
+                name = self.data[username]['name'], status = self.data[username]['status'],
+                session_token = self.data[username]['session_token'], 
+                updated = self.data[username]['updated'])
+        return None
 
     def add_person(self, person):
         if person.username in self.data:
@@ -84,3 +86,52 @@ class UserDatabase:
         del self.data[username]
         self.save_data()
         return "[account deleted]\n"
+
+    def get_all_people(self):
+        person_list = []
+        for key in self.data:
+            person_list.append(self.get_person(key))
+        return person_list
+
+    def show_people(self, person_list, user_info = None):
+        return_value = ""
+        for person in person_list:
+            return_value += person.name
+            return_value += " @"
+            return_value += person.username
+            return_value += f" (./app 'show {person.username}')\n"
+            return_value += f"  {person.status}\n"
+            return_value += f"  @ {person.updated}\n"
+            if user_info and person.username == user_info['username']:
+                return_value += f"  edit: ./app 'session {user_info['session_token']} edit'\n"
+        return return_value
+
+    def find_by_pattern(self, pattern):
+        person_list = self.get_all_people()
+        field = "any"
+        value = pattern        
+        if ':' in pattern:
+            field, value = pattern.split(':', 1)
+            field = field.strip()
+            value = value.strip()
+        matching_persons_list = []
+        for person in person_list:
+            if field == 'username':
+                if value in person.username:
+                    matching_persons_list.append(person)
+            elif field == 'name':
+                if value in person.name:
+                    matching_persons_list.append(person)
+            elif field == 'status':
+                if value in person.status:
+                    matching_persons_list.append(person)
+            elif field == 'updated':
+                if value in person.updated:
+                    matching_persons_list.append(person)
+            else:
+                if value in person.username or value in person.name or value in person.status or value in person.updated:
+                    matching_persons_list.append(person)
+        value = f'"{value}" in '
+        if len(matching_persons_list) == 0:
+            return field, value, "No one is here..."
+        return field, value, self.show_people(matching_persons_list)

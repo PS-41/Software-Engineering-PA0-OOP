@@ -26,7 +26,6 @@ class Application:
         print(output)
 
     def process_request(self, request):
-        print(request)
         if request == '' or request == 'home' or request.startswith("home "):
             return self.get_home_page_message()
         elif request.startswith("create"):
@@ -35,6 +34,12 @@ class Application:
             return self.login(request)
         elif request.startswith("session"):
             return self.process_session_request(request)
+        elif request.startswith("people"):
+            return self.show_people(request)
+        elif request.startswith("show"):
+            return self.show_person(request)
+        elif request.startswith("find"):
+            return self.find(request)
         elif request == 'logout' or request == 'delete' or request == 'update':
             return(
                 "invalid request: missing session token\n\n"
@@ -72,7 +77,7 @@ class Application:
             f"delete: ./app 'session {user_info.get('session_token')} delete'\n"
             f"logout: ./app 'session {user_info.get('session_token')} logout'\n"
             f"people: ./app '[session {user_info.get('session_token')} ]people'\n"
-            f"home: ./app ['session {user_info.get('session_token')}']"
+            f"home: ./app ['session {user_info.get('session_token')}']\n"
             )
 
     def get_person_message(self, person):
@@ -83,6 +88,23 @@ class Application:
             f"username: {person.username}\n"
             f"status: {person.status}\n"
             f"updated: {person.updated}\n\n"
+            )
+    def get_people_message(self):
+        return (
+            f"find: ./app 'find <pattern>'\n"
+            f"sort: ./app 'sort[ username|name|status|updated[ asc|desc]]'\n"
+            f"people: ./app 'people'\n"
+            f"join: ./app 'join'\n"
+            f"create: ./app 'create username=\"<value>\" password=\"<value>\" name=\"<value>\" status=\"<value>\"'\n"
+            f"home: ./app\n"
+            )
+
+    def get_people_message_with_session_token(self, user_info):
+        return (
+            f"find: ./app 'find <pattern>'\n"
+            f"sort: ./app 'sort[ username|name|status|updated[ asc|desc]]'\n"
+            f"update: ./app 'session {user_info.get('session_token')} update (name=\"<value>\"|status=\"<value>\")+'\n"
+            f"home: ./app ['session {user_info.get('session_token')}']\n"
             )
 
     def create_user(self, request):
@@ -266,6 +288,10 @@ class Application:
             return self.update(request, user_info)
         elif request.startswith("delete"):
             return self.delete(request, user_info.get('username'))
+        elif request.startswith('people'):
+            return self.show_people(request, user_info)
+        elif request.startswith('show'):
+            return self.show_person(request, user_info)
         return(
             "not found\n\n"
             "home: ./app\n"
@@ -327,4 +353,81 @@ class Application:
         return(
             "not found\n\n"
             "home: ./app\n"
+            )
+
+    def show_people(self, request, user_info = None):
+        if request[len('people')] != ' ':
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        person_list = self.database.get_all_people()
+        people = self.database.show_people(person_list, username)
+        if user_info:
+            return(
+                "People\n"
+                "------\n"
+                f"{people}\n\n"
+                f"{self.get_people_message_with_session_token(user_info)}"
+            )
+        else:
+            return(
+                "People\n"
+                "------\n"
+                f"{people}\n\n"
+                f"{self.get_people_message()}"
+            )
+
+    def show_person(self, request, user_info = None):
+        if request == 'show':
+            return(
+                "invalid request: missing username\n\n"
+                "home: ./app\n"
+                )
+        if request[len('show')] != ' ':
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        request = request.split()
+        username = request[1]
+        person = self.database.get_person(username)
+        if person is None:
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        if user_info:
+            return(
+                f"{self.get_person_message(person)}"
+                f"{self.get_updated_message(user_info)}\n"
+                )
+        return(
+            f"{self.get_person_message(person)}"
+            f"people: ./app 'people'\n"
+            f"home: ./app"
+            )
+    
+    def find(self, request):
+        if request == 'find':
+            person_list = self.database.get_all_people()
+            people = self.database.show_people(person_list, username)
+            return(
+                f"People (find all)\n"
+                "----------------------------\n"
+                f"{people}\n\n"
+                f"{self.get_people_message()}"
+                )
+        if request[len('find')] != ' ':
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        request = request[len('find '):]
+        field, value, people = self.database.find_by_pattern(request)
+        return(
+            f"People (find {value}{field})\n"
+            "----------------------------\n"
+            f"{people}\n\n"
+            f"{self.get_people_message()}"
             )
