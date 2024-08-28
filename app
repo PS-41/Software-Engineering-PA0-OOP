@@ -1,12 +1,11 @@
-#!/usr/bin/bash
+#!/usr/bin/python3
 
-# If no arguments are provided, set REQUEST to an empty string
-if [ $# -eq 0 ]; then
-  REQUEST=""
-else
-  # Join all arguments into a single string
-  REQUEST="$1"
-fi
+import sys
+import subprocess
 
-# Pass the entire REQUEST as one argument
-python3 src/app.py "$REQUEST"
+if __name__ == "__main__":
+    # Combine all command line arguments into a single request string
+    request = ' '.join(sys.argv[1:])
+
+    # Run the Python script with the request argument(s)
+    subprocess.run(["python3", "src/app.py", request])

@@ -42,7 +42,9 @@ class Application:
             return self.find(request)
         elif request.startswith("sort"):
             return self.sort(request)
-        elif request == 'logout' or request == 'delete' or request == 'update':
+        elif request.startswith("join"):
+            return self.join(request)
+        elif request == 'logout' or request == 'delete' or request == 'update' or request == 'edit':
             return(
                 "invalid request: missing session token\n\n"
                 "home: ./app\n"
@@ -134,25 +136,25 @@ class Application:
                     f"failed to create: missing {key}\n\n"
                     "home: ./app\n"
                     )
-        username = user_dict['username'].lower()
+        username = user_dict['username']
         password = user_dict['password']
         name = user_dict['name']
         status = user_dict['status']
 
         error_message = self.validate_user_name(username)
         if error_message != None:
-            return error_message
+            return "failed to create: " + error_message
         error_message = self.validate_password(password)
         if error_message != None:
-            return error_message
+            return "failed to create: " + error_message
         error_message = self.validate_name(name)
         if error_message != None:
-            return error_message
+            return "failed to create: " + error_message
         error_message = self.validate_status(status)
         if error_message != None:
-            return error_message
+            return "failed to create: " + error_message
 
-        person = Person(username, password, name, status, session_token = uuid.uuid4().hex, 
+        person = Person(username.lower(), password, name, status, session_token = uuid.uuid4().hex, 
             updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         if self.database.add_person(person):
@@ -164,21 +166,63 @@ class Application:
 
         return f"failed to create: {username} is already registered"
 
-
-    def validate_user_name(self, username):
-        if not re.match(r'^\w+$', username):
+    def join(self, request):
+        if len(request) > len('join') and request[len('join')] != ' ':
             return(
-                "failed to create: invalid username\n\n"
+                "not found\n\n"
                 "home: ./app\n"
                 )
+        print("New Person")
+        print("----------")
+        username = input("username: ")
+        password = input("password: ")
+        confirm_password = input("confirm password: ")
+        name = input("name: ")
+        status = input("status: ")
+        if password != confirm_password:
+            return(
+                "failed to join: passwords do not match\n"
+                "home: ./app\n"
+                )
+        error_message = self.validate_user_name(username)
+        if error_message != None:
+            return "failed to create: " + error_message
+        error_message = self.validate_password(password)
+        if error_message != None:
+            return "failed to create: " + error_message
+        error_message = self.validate_name(name)
+        if error_message != None:
+            return "failed to create: " + error_message
+        error_message = self.validate_status(status)
+        if error_message != None:
+            return "failed to create: " + error_message
+
+        person = Person(username.lower(), password, name, status, session_token = uuid.uuid4().hex, 
+            updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+        if self.database.add_person(person):
+            return (
+                "[account created]\n"
+                f"{self.get_person_message(person)}"
+                f"{self.get_updated_message(person.to_dict())}"
+                )
+
+        return f"failed to create: {username} is already registered"
+
+    def validate_user_name(self, username):
         if len(username) < 3:
             return(
-                "failed to create: username is too short\n\n"
+                "username is too short\n\n"
                 "home: ./app\n"
                 )
         if len(username) > 20:
             return(
-                "failed to create: username is too long\n\n"
+                "username is too long\n\n"
+                "home: ./app\n"
+                )
+        if not re.match(r'^\w+$', username):
+            return(
+                "invalid username\n\n"
                 "home: ./app\n"
                 )
         return None
@@ -186,12 +230,12 @@ class Application:
     def validate_password(self, password):
         if '"' in password:
             return (
-                'failed to create: password contains double quote\n\n'
+                'password contains double quote\n\n'
                 "home: ./app\n"
                 )
         if len(password) < 4:
             return(
-                "failed to create: password is too short\n\n"
+                "password is too short\n\n"
                 "home: ./app\n"
                 )
         return None
@@ -199,17 +243,17 @@ class Application:
     def validate_name(self, name):
         if '"' in name:
             return (
-                'failed to create: name contains double quote\n\n'
+                'name contains double quote\n\n'
                 "home: ./app\n"
                 )
         if len(name) < 1:
             return (
-                "failed to create: name is too short\n\n"
+                "name is too short\n\n"
                 "home: ./app\n"
                 )
         if len(name) > 30:
             return (
-                "failed to create: name is too long\n\n"
+                "name is too long\n\n"
                 "home: ./app\n"
                 )
         return None
@@ -217,17 +261,17 @@ class Application:
     def validate_status(self, status):
         if '"' in status:
             return (
-                'failed to create: status contains double quote\n\n'
+                'status contains double quote\n\n'
                 "home: ./app\n"
                 )
         if len(status) < 1:
             return (
-                "failed to create: status is too short\n\n"
+                "status is too short\n\n"
                 "home: ./app\n"
                 )
         if len(status) > 100:
             return (
-                "failed to create: status is too long\n\n"
+                "status is too long\n\n"
                 "home: ./app\n"
                 )
         return None
@@ -295,6 +339,10 @@ class Application:
             return self.show_people(request, user_info)
         elif request.startswith('show'):
             return self.show_person(request, user_info)
+        elif request.startswith('edit'):
+            return self.edit(request, user_info)
+        elif request.startswith('find'):
+            return self.find(request, user_info)
         return(
             "not found\n\n"
             "home: ./app\n"
@@ -311,6 +359,32 @@ class Application:
             "home: ./app\n"
             )
 
+    def edit(self, request, user_info):
+        if len(request) > len('edit') and request[len('edit')] != ' ':
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        print("Edit Person")
+        print("-----------")
+        print("leave blank to keep [current value]")
+        updated_name = input(f"name [{user_info['name']}]: ")
+        updated_status = input(f"status [{user_info['status']}]: ")
+        if updated_name:
+            error_message = self.validate_name(updated_name)
+            if error_message != None:
+                return "failed to update: " + error_message
+        if updated_status:
+            error_message = self.validate_status(updated_status)
+            if error_message != None:
+                return "failed to update: " + error_message
+        return(
+            f"{self.database.update_user(user_info.get('username'), updated_name, updated_status)}\n"
+            f"{self.get_person_message(self.database.get_person(user_info.get('username')))}"
+            f"{self.get_updated_message(user_info)}"
+            )
+
+
     def update(self, request, user_info):
         if request == 'update':
             return(
@@ -324,13 +398,13 @@ class Application:
                 )
         request = request[len('update '):]
         required_keys = ['name', 'status']
-        pattern = r'(\w+)\s*=\s*"([^"]*)"'
+        pattern = r'(\w+)\s*=\s*"(.*?)(?<!\\)"'
         matches = re.findall(pattern, request)        
         args_dict = {key: value for key, value in matches}
         to_update_dict = {}
         for key in required_keys:
             if key in args_dict:
-                if args_dict[key]: to_update_dict[key] = args_dict[key]
+                to_update_dict[key] = args_dict[key]
 
         if len(to_update_dict) == 0:
             return(
@@ -343,13 +417,13 @@ class Application:
         if 'status' in to_update_dict: updated_status = to_update_dict['status']
 
         if updated_name != None:
-            error_message = self.validate_user_name(username)
+            error_message = self.validate_name(updated_name)
             if error_message != None:
-                return error_message
+                return "failed to update: " + error_message
         if updated_status != None:
-            error_message = self.validate_status(status)
+            error_message = self.validate_status(updated_status)
             if error_message != None:
-                return error_message
+                return "failed to update: " + error_message
 
         return(
             f"{self.database.update_user(user_info.get('username'), updated_name, updated_status)}\n"
@@ -382,6 +456,7 @@ class Application:
                 "No one is here...\n\n"
                 f"{self.get_people_message()}"
                 )
+        person_list = self.sort_helper(person_list, "updated", "desc")
         people = self.database.show_people(person_list, user_info)
         if user_info:
             return(
@@ -436,16 +511,24 @@ class Application:
             f"home: ./app"
             )
     
-    def find(self, request):
+    def find(self, request, user_info = None):
         if request == 'find':
             person_list = self.database.get_all_people()
             people = self.database.show_people(person_list)
-            return(
-                f"People (find all)\n"
-                "----------------------------\n"
-                f"{people}\n\n"
-                f"{self.get_people_message()}"
-                )
+            if user_info == None:
+                return(
+                    f"People (find all)\n"
+                    "----------------------------\n"
+                    f"{people}\n\n"
+                    f"{self.get_people_message()}"
+                    )
+            else:
+                return(
+                    f"People (find all)\n"
+                    "----------------------------\n"
+                    f"{people}\n\n"
+                    f"{self.get_people_message_with_session_token(user_info)}"
+                    )
         if request[len('find')] != ' ':
             return(
                 "not found\n\n"
@@ -453,12 +536,20 @@ class Application:
                 )
         request = request[len('find '):]
         field, value, people = self.database.find_by_pattern(request)
-        return(
-            f"People (find {value}{field})\n"
-            "----------------------------\n"
-            f"{people}\n\n"
-            f"{self.get_people_message()}"
-            )
+        if user_info == None:
+            return(
+                f"People (find {value}{field})\n"
+                "----------------------------\n"
+                f"{people}\n\n"
+                f"{self.get_people_message()}"
+                )
+        else:
+            return(
+                f"People (find {value}{field})\n"
+                "----------------------------\n"
+                f"{people}\n\n"
+                f"{self.get_people_message_with_session_token(user_info)}"
+                )
 
     def sort(self, request):
         if len(request) > len('sort') and request[len('sort')] != ' ':
@@ -493,9 +584,10 @@ class Application:
                 "home: ./app\n"
                 )
         person_list = self.database.get_all_people()
-        people = self.sort_helper(person_list, attribute, order)
+        person_list = self.sort_helper(person_list, attribute, order)
+        people = self.database.show_people(person_list)
         return(
-            f"People (sorted by {attribute},{criteria})\n"
+            f"People (sorted by {attribute}, {criteria})\n"
             "----------------------------\n"
             f"{people}\n\n"
             f"{self.get_people_message()}"
@@ -516,5 +608,4 @@ class Application:
                 return person.updated
         key = sort_key
         person_list = sorted(person_list, key = key, reverse = reverse)
-        people = self.database.show_people(person_list)
-        return people
+        return person_list
