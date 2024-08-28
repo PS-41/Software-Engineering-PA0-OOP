@@ -40,6 +40,8 @@ class Application:
             return self.show_person(request)
         elif request.startswith("find"):
             return self.find(request)
+        elif request.startswith("sort"):
+            return self.sort(request)
         elif request == 'logout' or request == 'delete' or request == 'update':
             return(
                 "invalid request: missing session token\n\n"
@@ -62,7 +64,7 @@ class Application:
 
     def get_home_page_message_with_session_token(self, user_info):
         return (
-            f"Welcome back to the App, {user_info.get('username')}!\n\n"
+            f"Welcome back to the App, {user_info.get('name')}!\n\n"
             f"{user_info.get('status')}\n\n"
             f"edit: ./app 'session {user_info.get('session_token')} edit'\n"
             f"update: ./app 'session {user_info.get('session_token')} update (name=\"<value>\"|status=\"<value>\")+'\n"
@@ -89,6 +91,7 @@ class Application:
             f"status: {person.status}\n"
             f"updated: {person.updated}\n\n"
             )
+
     def get_people_message(self):
         return (
             f"find: ./app 'find <pattern>'\n"
@@ -280,7 +283,7 @@ class Application:
                 )
         
         request = request[len(session_token) + 1:]
-        if request == '':
+        if request == '' or request == "home" or request.startswith("home "):
             return self.get_home_page_message_with_session_token(user_info)
         elif request.startswith("logout"):
             return self.logout(request, user_info.get('username'))
@@ -298,7 +301,7 @@ class Application:
             )
 
     def logout(self, request, username):
-        if request.startswith('logout '):
+        if request == 'logout' or request.startswith('logout '):
             return(
                 f"{self.database.logout_user(username)}"
                 f"{self.get_home_page_message()}"
@@ -338,6 +341,16 @@ class Application:
         updated_status = None
         if 'name' in to_update_dict: updated_name = to_update_dict['name']
         if 'status' in to_update_dict: updated_status = to_update_dict['status']
+
+        if updated_name != None:
+            error_message = self.validate_user_name(username)
+            if error_message != None:
+                return error_message
+        if updated_status != None:
+            error_message = self.validate_status(status)
+            if error_message != None:
+                return error_message
+
         return(
             f"{self.database.update_user(user_info.get('username'), updated_name, updated_status)}\n"
             f"{self.get_person_message(self.database.get_person(user_info.get('username')))}"
@@ -345,7 +358,7 @@ class Application:
             )
 
     def delete(self, request, username):
-        if request.startswith('delete '):
+        if request == 'delete' or request.startswith('delete '):
             return (
                 f"{self.database.delete_user(username)}"
                 f"{self.get_home_page_message()}"
@@ -356,13 +369,20 @@ class Application:
             )
 
     def show_people(self, request, user_info = None):
-        if request[len('people')] != ' ':
+        if len(request) > len('people') and request[len('people')] != ' ':
             return(
                 "not found\n\n"
                 "home: ./app\n"
                 )
         person_list = self.database.get_all_people()
-        people = self.database.show_people(person_list, username)
+        if len(person_list) == 0:
+            return(
+                "People\n"
+                "------\n"
+                "No one is here...\n\n"
+                f"{self.get_people_message()}"
+                )
+        people = self.database.show_people(person_list, user_info)
         if user_info:
             return(
                 "People\n"
@@ -398,10 +418,18 @@ class Application:
                 "home: ./app\n"
                 )
         if user_info:
-            return(
-                f"{self.get_person_message(person)}"
-                f"{self.get_updated_message(user_info)}\n"
-                )
+            if user_info['session_token'] == person.session_token:
+                return(
+                    f"{self.get_person_message(person)}"
+                    f"{self.get_updated_message(user_info)}\n"
+                    )
+            else:
+                return(
+                    f"{self.get_person_message(person)}"
+                    f"people: ./app '[session {user_info.get('session_token')} ]people'\n"
+                    f"logout: ./app 'session {user_info.get('session_token')} logout'\n"
+                    f"home: ./app ['session {user_info.get('session_token')}']\n"
+                    )
         return(
             f"{self.get_person_message(person)}"
             f"people: ./app 'people'\n"
@@ -411,7 +439,7 @@ class Application:
     def find(self, request):
         if request == 'find':
             person_list = self.database.get_all_people()
-            people = self.database.show_people(person_list, username)
+            people = self.database.show_people(person_list)
             return(
                 f"People (find all)\n"
                 "----------------------------\n"
@@ -431,3 +459,62 @@ class Application:
             f"{people}\n\n"
             f"{self.get_people_message()}"
             )
+
+    def sort(self, request):
+        if len(request) > len('sort') and request[len('sort')] != ' ':
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        attribute = 'updated' # default update value
+        order = 'desc' # default criteria
+        criteria = 'newest'
+        request = request.split()
+        if len(request) > 1:
+            attribute = request[1]
+            if attribute != 'updated':
+                order = 'asc'
+            if len(request) > 2:
+                order = request[2]
+        if order == 'asc':
+            criteria = 'a-z'
+            if attribute == 'updated':
+                criteria = 'oldest'
+        if order == 'desc':
+            criteria = 'z-a'
+            if attribute == 'updated':
+                criteria = 'newest'
+
+        allowed_attributes = ['username', 'name', 'status', 'updated']
+        allowed_order = ['asc', 'desc']
+        if attribute not in allowed_attributes or order not in allowed_order:
+            return(
+                "not found\n\n"
+                "home: ./app\n"
+                )
+        person_list = self.database.get_all_people()
+        people = self.sort_helper(person_list, attribute, order)
+        return(
+            f"People (sorted by {attribute},{criteria})\n"
+            "----------------------------\n"
+            f"{people}\n\n"
+            f"{self.get_people_message()}"
+        )
+
+    def sort_helper(self, person_list, attribute, order):
+        reverse = False
+        if order == 'desc':
+            reverse = True
+        def sort_key(person):
+            if attribute == 'username':
+                return person.username
+            elif attribute == 'name':
+                return person.name
+            elif attribute == 'status':
+                return person.status
+            else:
+                return person.updated
+        key = sort_key
+        person_list = sorted(person_list, key = key, reverse = reverse)
+        people = self.database.show_people(person_list)
+        return people

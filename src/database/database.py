@@ -129,6 +129,8 @@ class UserDatabase:
                 if value in person.updated:
                     matching_persons_list.append(person)
             else:
+                field = "any"
+                value = pattern
                 if value in person.username or value in person.name or value in person.status or value in person.updated:
                     matching_persons_list.append(person)
         value = f'"{value}" in '
