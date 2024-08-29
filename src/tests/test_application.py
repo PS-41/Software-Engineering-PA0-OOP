@@ -142,6 +142,7 @@ def test_process_request(app):
     result = app.process_request('find')
     result = app.process_request('sort')
     result = app.process_request('joinn')
+    assert "not found" in result
 
 def test_process_session_request(app):
     result = app.process_session_request('sessioncool')
@@ -154,6 +155,7 @@ def test_process_session_request(app):
     result = app.process_session_request('session show')
     result = app.process_session_request('session find')
     result = app.process_session_request('session prakhar')
+    assert "Welcome back to the App" in result
 
 def test_show_person(app, mock_database):
     result = app.show_person('showcool')
@@ -162,16 +164,20 @@ def test_show_person(app, mock_database):
     result = app.show_person('show ps41',
         {'username': 'testuser', 'password': '12345', 'status': 'status', 'name': 'name', 
                          'session_token': 'session_token', 'updated': 'updated'})
+    assert "Person" in result
 
 def test_sort(app):
     result = app.sort('sort updated desc')
     result = app.sort('sort updated asc')
+    assert "People" in result
 
 def test_sort_helper(app):
     result = app.sort_helper([], 'name', 'asc')
+    assert len(result) == 0
 
 def test_run(app):
     result = app.run('create')
+    assert result is None
 
 def test_handle_exception(app):
     app.handle_exception('e')
@@ -181,5 +187,6 @@ def test_show_people(app, mock_database):
     person_list = [person]
     mock_database.get_all_people.return_value = person_list
     mock_database.show_people.return_value = Person("testuser", "password", "Old Name", "Old Status")
-    app.show_people("people", {'username': 'testuser', 'password': '12345', 'status': 'status', 'name': 'name', 
+    result = app.show_people("people", {'username': 'testuser', 'password': '12345', 'status': 'status', 'name': 'name', 
                          'session_token': 'session_token', 'updated': 'updated'})
+    assert "People" in result
