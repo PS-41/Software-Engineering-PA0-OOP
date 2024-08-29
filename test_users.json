@@ -1,0 +1,10 @@
+{
+    "testuser": {
+        "username": "testuser",
+        "password": "password123",
+        "name": "Test User",
+        "status": "active",
+        "session_token": null,
+        "updated": null
+    }
+}

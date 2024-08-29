@@ -25,5 +25,5 @@ if [ "$tests_total" -ne 0 ]; then
   pass_percentage=$(echo "scale=2; $tests_passed / $tests_total * 100" | bc)
 fi
 
+echo "passing: ${pass_percentage}%"
 echo "coverage: ${coverage_rate}"
-echo "pass_percentage: ${pass_percentage}%"
