@@ -7,7 +7,6 @@ import builtins
 
 @pytest.fixture
 def mock_database():
-    """Fixture to initialize a mock database."""
     with patch('application.application.UserDatabase') as MockDatabase:
         db_instance = MockDatabase.return_value
         db_instance.get_all_people.return_value = []
@@ -19,9 +18,8 @@ def mock_database():
 
 @pytest.fixture
 def app(mock_database):
-    """Fixture to initialize the application instance with the mocked database."""
     app_instance = Application()
-    app_instance.database = mock_database  # Assign the mocked database
+    app_instance.database = mock_database
     return app_instance
 
 
