@@ -169,3 +169,17 @@ def test_sort(app):
 
 def test_sort_helper(app):
     result = app.sort_helper([], 'name', 'asc')
+
+def test_run(app):
+    result = app.run('create')
+
+def test_handle_exception(app):
+    app.handle_exception('e')
+
+def test_show_people(app, mock_database):
+    person = Person("testuser", "password123", "Test User", "active", "session", "active")
+    person_list = [person]
+    mock_database.get_all_people.return_value = person_list
+    mock_database.show_people.return_value = Person("testuser", "password", "Old Name", "Old Status")
+    app.show_people("people", {'username': 'testuser', 'password': '12345', 'status': 'status', 'name': 'name', 
+                         'session_token': 'session_token', 'updated': 'updated'})

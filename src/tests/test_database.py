@@ -44,10 +44,11 @@ def test_authenticate_user():
     actual = test_db.authenticate_user(test_username, test_password).to_dict()
     expected = create_person_helper().to_dict()
     assert actual['status'] == expected['status']
-
     test_password = "testpassword"
     actual = test_db.authenticate_user(test_username, test_password)
     expected = None
+    assert actual == None
+    actual = test_db.authenticate_user('invalide', 'invalid')
     assert actual == None
 
 def test_delete_user():
@@ -82,6 +83,8 @@ def test_validate_session_token():
     actual = test_db.validate_session_token('testsession')
     expected = "testuser"
     assert actual['username'] == expected
+    actual = test_db.validate_session_token('invalid')
+    assert actual == None
 
 def test_find_by_pattern():
     test_db = create_db_helper()
@@ -125,6 +128,15 @@ def test_find_by_pattern():
     expected_field = "any"
     actual_field, actual_value, actual_str = test_db.find_by_pattern(pattern)
     assert actual_field == expected_field
-    
 
-    
+def test_get_person():
+    test_db = create_db_helper()
+    actual = test_db.get_person('invalid')
+    assert actual == None
+
+def test_show_people():
+    test_db = create_db_helper()
+    person = Person("testuser", "password123", "Test User", "active", "session", "active")
+    actual = test_db.show_people([person], {'username': 'testuser', 'password': '12345', 'status': 'status', 'name': 'name', 
+                         'session_token': 'session_token', 'updated': 'updated'})
+    assert actual != None
